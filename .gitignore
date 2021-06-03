@@ -1,7 +1,6 @@
 *.tar.gz
 
 *.pth
-*.npy
 
 *.bmp
 *.png

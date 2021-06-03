@@ -14,7 +14,7 @@ import random
 from L2Netmodel import L2Net
 from make_dataset import HPatchesDataset
 
-EPOCHS = 100
+EPOCHS = 50
 BATCH_SIZE = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = L2Net(1, 128).to(DEVICE)
@@ -135,7 +135,8 @@ def train(model, device, optimizer, epoch):
                     epoch, batch_base/(BATCH_SIZE * 16) * len(data), train_data.__len__(),
                     100. * batch_base/(BATCH_SIZE*16) / (train_data.__len__() / (BATCH_SIZE * 16)), loss.item()))
 
-
+test_corrects = []
+test_losses = []
 def test(epoch_num, model, device):
     model.eval()
     test_loss = 0
@@ -189,9 +190,17 @@ def test(epoch_num, model, device):
 
     print("test_loss = ", test_loss / test_num)
     print("correct = ", correct/ total_check)
+    test_corrects.append(correct/total_check)
+    test_losses.append(test_loss / test_num)
 
 for epoch in range(1, EPOCHS + 1):
     train(model, DEVICE, optimizer, epoch)
     test(epoch, model, DEVICE)
 
-print("train end")
+print("train end\n\nSaving testing data...")
+np.save("E1_test_loss", test_losses)
+np.save("E1_test_corr", test_corrects)
+print("OK")
+print("Saving model...")
+torch.save(model.state_dict(), "E1_model.pth")
+print("OK")
