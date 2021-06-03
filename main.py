@@ -90,8 +90,8 @@ def E3(dift_codes):
 
 train_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/train")
 test_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/test")
-# train_loader = DataLoader(train_data, batch_size=BATCH_SIZE,shuffle=False)#使用DataLoader加载数据
-# test_loader = DataLoader(test_data, batch_size=BATCH_SIZE,shuffle=False)#使用DataLoader加载数据
+# train_loader = DataLoader(train_data, batch_size=BATCH_SIZE,shuffle=False)
+# test_loader = DataLoader(test_data, batch_size=BATCH_SIZE,shuffle=False)
 
 def train(model, device, optimizer, epoch):
         model.train()
