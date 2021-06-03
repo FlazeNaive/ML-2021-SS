@@ -21,8 +21,8 @@ model = L2Net(1, 128).to(DEVICE)
 optimizer = optim.Adadelta(model.parameters(), lr=0.01)
 
 def E1(dift_codes):
-    Y1 = dift_codes[0] #[batch,diftcode_len]
-    Y2 = dift_codes[1] #[batch,diftcode_len]
+    Y1 = dift_codes[0] 
+    Y2 = dift_codes[1] 
     
     #E1
     eps = 1e-6
@@ -47,31 +47,46 @@ def E1(dift_codes):
     return tmp_E1
 
 def E2(dift_codes):
-    Y1 = dift_codes[0] #[batch,diftcode_len]
-    Y2 = dift_codes[1] #[batch,diftcode_len]
+    Y1 = dift_codes[0] 
+    Y2 = dift_codes[1] 
     
     #E2
-    eps = 1e-6
-    Y1_tmp = torch.unsqueeze(Y1,dim=0)
-    Y2_tmp = torch.unsqueeze(Y2,dim=1)
-    D_sub = Y1_tmp - Y2_tmp #(batch,batch,diftcode_len)
-    D = torch.sqrt(torch.sum(D_sub*D_sub,dim=2)+1e-6)
+    Y1_mean = torch.mean(Y1, dim = 1)
+    Y2_mean = torch.mean(Y2, dim = 1)
 
-    # D_mat_mul = torch.matmul(Y1,Y2.T)#(batch,batch)
-    # D = torch.sqrt(2.0*(1.0-D_mat_mul+1e-6))#[batch,batch]               
-    
-    D_exp = torch.exp(2.0-D)
-    D_ii = torch.unsqueeze(torch.diag(D_exp),dim=1)#[batch,1]
-    #"compute_col_loss"
-    D_col_sum = torch.sum(D_exp.T,dim=1,keepdim=True)#[batch,1]
-    s_ii_c = D_ii / (eps+D_col_sum)
-    #"compute_row_loss"
-    D_row_sum = torch.sum(D_exp,dim=1,keepdim=True)#[batch,1]
-    s_ii_r = D_ii / (eps+D_row_sum)
-    
-    tmp_E1 = -0.5*(torch.sum(torch.log(s_ii_c))+torch.sum(torch.log(s_ii_r)))
-    return tmp_E1
+    Y1_tmp = (Y1.t()- Y1_mean).t()
+    Y2_tmp = (Y2.t()- Y2_mean).t()
 
+    Y1_norm = torch.norm(Y1_tmp, p = 2, dim = 1)
+    Y2_norm = torch.norm(Y2_tmp, p = 2, dim = 1)
+    # print(Y1_norm)
+
+    Y1_up = Y1_tmp.mm(Y1_tmp.t())
+    Y2_up = Y2_tmp.mm(Y2_tmp.t())
+
+    Y1_up = (Y1_up.t() / Y1_norm).t()
+    # print(Y1_up)
+    Y1_up = Y1_up / Y1_norm
+    # print(Y1_up)
+    # print("UUU")
+    Y2_up = Y2_up / Y2_norm
+    # print(Y2_up)
+    Y2_up = (Y2_up.t() / Y2_norm).t()
+    # print(Y2_up)
+
+    r_ij_1 = Y1_up.mul(Y1_up) 
+    r_ij_1 = torch.sum(r_ij_1) - torch.sum(torch.diag(r_ij_1))
+    r_ij_2 = Y2_up.mul(Y2_up) 
+    r_ij_2 = torch.sum(r_ij_2) - torch.sum(torch.diag(r_ij_2))
+
+    tmp_E2 = 0.5*(r_ij_1 + r_ij_2)
+    return tmp_E2
+
+def E3(dift_codes):
+    Y1 = dift_codes[0] 
+    Y2 = dift_codes[1] 
+    tmp_E3 = 0
+    return tmp_E3
 
 train_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/train")
 test_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/test")
@@ -127,7 +142,7 @@ def train(model, device, optimizer, epoch):
             # print(output.shape)
             # quit()
             out_Y = [output[0 : BATCH_SIZE :], output[BATCH_SIZE : BATCH_SIZE*2, :]]
-            loss = E1(out_Y)
+            loss = E1(out_Y) + E2(out_Y)
             loss.backward()
             optimizer.step()
             if(batch_base/(BATCH_SIZE * 16)+1)%10 ==0:
@@ -173,7 +188,7 @@ def test(epoch_num, model, device):
 
             output = model(data)
             out_Y = [output[0 : BATCH_SIZE, :], output[BATCH_SIZE : 2 * BATCH_SIZE, :]]
-            test_loss += E1(out_Y)
+            test_loss += E1(out_Y) + E2(out_Y)
             test_num = test_num + 1
 
             L2_dis = torch.norm(output[:, None] - output, dim=2, p=2)
@@ -198,9 +213,9 @@ for epoch in range(1, EPOCHS + 1):
     test(epoch, model, DEVICE)
 
 print("train end\n\nSaving testing data...")
-np.save("E1_test_loss", test_losses)
-np.save("E1_test_corr", test_corrects)
+np.save("E1+E2_test_loss", test_losses)
+np.save("E1+E2_test_corr", test_corrects)
 print("OK")
 print("Saving model...")
-torch.save(model.state_dict(), "E1_model.pth")
+torch.save(model.state_dict(), "E1+E2_model.pth")
 print("OK")

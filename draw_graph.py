@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
-E1_corr = np.load("E1_test_corr.npy")
-E1_loss = np.load("E1_test_loss.npy")
+PATT = "E1+E2"
+
+E1_corr = np.load(PATT+"_test_corr.npy")
+E1_loss = np.load(PATT+"_test_loss.npy")
 subscript = [i for i in range(len(E1_corr))]
 
 fig, ax1 = plt.subplots()
@@ -22,6 +24,6 @@ ax2.plot(subscript, E1_loss, color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
-plt.title("E1")
-plt.savefig('E1.jpg', bbox_inches='tight')
+plt.title(PATT)
+plt.savefig(PATT+'.jpg', bbox_inches='tight')
 # plt.show()
