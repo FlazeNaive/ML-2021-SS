@@ -1,0 +1,15 @@
+*.tar.gz
+
+*.pth
+*.npy
+
+*.bmp
+*.png
+
+.vscode
+__pycache__
+data
+
+datamaker/test
+datamaker/data
+datamaker/train
