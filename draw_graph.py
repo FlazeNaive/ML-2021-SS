@@ -2,7 +2,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
-PATT = "E1+E2"
+E1_corr = np.load("E1_test_corr.npy")
+E12_corr = np.load("E1+E2_test_corr.npy")
+subscript = [i for i in range(len(E1_corr))]
+
+fig, ax1 = plt.subplots()
+
+color = 'tab:blue'
+ax1.set_xlabel('epoch')
+ax1.set_ylabel('E1 Accuracy', color=color)
+ax1.plot(subscript, E1_corr, color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+color = 'tab:red'
+ax1.set_ylabel('E1+E2 Accuracy', color=color)
+ax1.plot(subscript, E12_corr, color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
+plt.title("Accuracy")
+plt.savefig('ACC.jpg', bbox_inches='tight')
+quit() 
+
+PATT = "E1"
 
 E1_corr = np.load(PATT+"_test_corr.npy")
 E1_loss = np.load(PATT+"_test_loss.npy")
