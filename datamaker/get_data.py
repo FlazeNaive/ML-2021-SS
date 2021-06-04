@@ -4,17 +4,19 @@ from matplotlib.colors import Colormap
 import matplotlib.pyplot as plt
 import numpy as np
 
+plt.switch_backend('agg')
 print("=============start=============")
 
-_PATH = "/home/FlazeH/Desktop/myL2Net/data/hpatches-release" #\i_ajuntament"
+_PATH = "/home/FlazeH/Desktop/myL2Net/data/hpatches-release" #/i_ajuntament"
 
-imglist = []
-# count = 0
+count = 0
 for FOLDER in os.listdir(_PATH):
     PATH = os.path.join(_PATH, FOLDER)
     # count = count + 1
     # if count > 10:
     #     break
+
+    imglist = []
     for s in os.listdir(PATH):
         if "ref.png" in s:
             # print(s)
@@ -61,8 +63,10 @@ for FOLDER in os.listdir(_PATH):
         # tmp_to_show = np.concatenate((tmp_to_show, tmp), axis = 0)
 
     i_ajuntament = np.array(i_ajuntament)
+    # print(i_ajuntament)
     print("saving " + FOLDER + ".npy")
-    np.save("datamaker/data/"+FOLDER+".npy", i_ajuntament)
+    np.save("data/"+FOLDER+".npy", i_ajuntament)
+    # sxxxx = input()
     # plt.imshow(tmp_to_show, cmap=plt.cm.gray)
     # plt.show()
 

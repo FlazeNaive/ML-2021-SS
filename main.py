@@ -14,7 +14,7 @@ import random
 from L2Netmodel import L2Net
 from make_dataset import HPatchesDataset
 
-EPOCHS = 50
+EPOCHS = 80
 BATCH_SIZE = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = L2Net(1, 128).to(DEVICE)
@@ -47,6 +47,8 @@ def E1(dift_codes):
     return tmp_E1
 
 def E2(dift_codes):
+    # return 0
+
     Y1 = dift_codes[0] 
     Y2 = dift_codes[1] 
     
@@ -213,9 +215,12 @@ for epoch in range(1, EPOCHS + 1):
     test(epoch, model, DEVICE)
 
 print("train end\n\nSaving testing data...")
-np.save("E1+E2_test_loss", test_losses)
-np.save("E1+E2_test_corr", test_corrects)
+# np.save("E1+E2_test_loss", test_losses)
+# np.save("E1+E2_test_corr", test_corrects)
+np.save("E1_test_loss", test_losses)
+np.save("E1_test_corr", test_corrects)
 print("OK")
 print("Saving model...")
-torch.save(model.state_dict(), "E1+E2_model.pth")
+# torch.save(model.state_dict(), "E1+E2_model.pth")
+torch.save(model.state_dict(), "E1_model.pth")
 print("OK")
