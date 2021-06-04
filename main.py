@@ -18,6 +18,7 @@ EPOCHS = 100
 BATCH_SIZE = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = L2Net(1, 128).to(DEVICE)
+model.load_state_dict(torch.load("E1+E2_model.pth"))
 optimizer = optim.Adadelta(model.parameters())
 
 def E1(dift_codes):
@@ -93,6 +94,10 @@ def E3(dift_codes):
 train_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/train")
 valid_data= HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/valid")
 test_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/test")
+
+# for i in range(valid_data.__len__()):
+#     print(valid_data.__getitem__(i))
+# quit()
 # train_loader = DataLoader(train_data, batch_size=BATCH_SIZE,shuffle=False)
 # test_loader = DataLoader(test_data, batch_size=BATCH_SIZE,shuffle=False)
 
@@ -153,8 +158,9 @@ def train(model, device, optimizer, epoch):
                     epoch, batch_base/(BATCH_SIZE * 16) * len(data), train_data.__len__(),
                     100. * batch_base/(BATCH_SIZE*16) / (train_data.__len__() / (BATCH_SIZE * 16)), loss.item()))
 
-valid_corrects = []
-valid_losses = []
+# valid_corrects = []
+valid_corrects = np.load("E1+E2_valid_corr.npy")
+valid_corrects = valid_corrects.tolist()
 def valid(model, device):
     model.eval()
     valid_loss = 0
@@ -197,11 +203,12 @@ def valid(model, device):
             L2_dis = torch.norm(output[:, None] - output, dim=2, p=2)
             L2_dis = L2_dis.cpu()
             answer = target.cpu()
+            # print(answer)
             for i in range(BATCH_SIZE):
                 total_check = total_check + 1
                 nrst = np.argmin(L2_dis[i, BATCH_SIZE:BATCH_SIZE*2])
-                # print(i)
-                # print(nrst)
+                # print("i = ", i , answer[i])
+                # print("nrst = " , nrst+BATCH_SIZE , answer[nrst+BATCH_SIZE])
                 # print("=====")
                 if answer[BATCH_SIZE + nrst] == answer[i] :                        
                     correct = correct + 1
@@ -209,10 +216,13 @@ def valid(model, device):
     print("valid_loss = ", valid_loss / valid_num)
     print("correct = ", correct/ total_check)
     valid_corrects.append(correct/total_check)
-    valid_losses.append(valid_loss / valid_num)
 
-test_corrects = []
-test_losses = []
+# test_corrects = []
+# test_losses = []
+test_corrects = np.load("E1+E2_test_corr.npy")
+test_corrects = test_corrects.tolist()
+test_losses = np.load("E1+E2_test_loss.npy")
+test_losses = test_losses.tolist()
 def test(model, device):
     model.eval()
     test_loss = 0
@@ -270,28 +280,32 @@ def test(model, device):
     test_losses.append(test_loss / test_num)
 
 
-valid(model, DEVICE)
-test(model, DEVICE)
+# valid(model, DEVICE)
+# test(model, DEVICE)
 
-for epoch in range(1, EPOCHS + 1):
+# for epoch in range(1, EPOCHS + 1):
+for epoch in range(80, 200):
     train(model, DEVICE, optimizer, epoch)
     valid(model, DEVICE)
     test(model, DEVICE)
 
     if epoch%20 == 0:
         print("train end\n\nSaving testing data...")
-        # np.save("E1+E2_test_loss", test_losses)
-        # np.save("E1+E2_test_corr", test_corrects)
-        np.save("E1_test_loss", test_losses)
-        np.save("E1_test_corr", test_corrects)
-        np.save("E1_valid_corr", valid_corrects)
+        np.save("E1+E2_test_loss", test_losses)
+        np.save("E1+E2_test_corr", test_corrects)
+        np.save("E1+E2_valid_corr", valid_corrects)
+        # np.save("E1_test_loss", test_losses)
+        # np.save("E1_test_corr", test_corrects)
+        # np.save("E1_valid_corr", valid_corrects)
 
         print("OK")
         print("Saving model...")
-        # torch.save(model.state_dict(), "E1+E2_model.pth")
-        torch.save(model.state_dict(), "E1_model.pth")
+        torch.save(model.state_dict(), "E1+E2_model.pth")
+        # torch.save(model.state_dict(), "E1_model.pth")
         print("OK")
         
+        '''
         opt = input("continue? y/n")
         if opt == "n":
             break
+        '''
