@@ -14,11 +14,11 @@ import random
 from L2Netmodel import L2Net
 from make_dataset import HPatchesDataset
 
-EPOCHS = 80
+EPOCHS = 100
 BATCH_SIZE = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = L2Net(1, 128).to(DEVICE)
-optimizer = optim.Adadelta(model.parameters(), lr=0.01)
+optimizer = optim.Adadelta(model.parameters())
 
 def E1(dift_codes):
     Y1 = dift_codes[0] 
@@ -91,6 +91,7 @@ def E3(dift_codes):
     return tmp_E3
 
 train_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/train")
+valid_data= HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/valid")
 test_data = HPatchesDataset("/home/FlazeH/Desktop/myL2Net/datamaker/test")
 # train_loader = DataLoader(train_data, batch_size=BATCH_SIZE,shuffle=False)
 # test_loader = DataLoader(test_data, batch_size=BATCH_SIZE,shuffle=False)
@@ -152,9 +153,67 @@ def train(model, device, optimizer, epoch):
                     epoch, batch_base/(BATCH_SIZE * 16) * len(data), train_data.__len__(),
                     100. * batch_base/(BATCH_SIZE*16) / (train_data.__len__() / (BATCH_SIZE * 16)), loss.item()))
 
+valid_corrects = []
+valid_losses = []
+def valid(model, device):
+    model.eval()
+    valid_loss = 0
+    valid_num = 0
+    correct = 0
+    total_check = 0
+    with torch.no_grad():
+        for batch_base in range(0, valid_data.__len__() - 16 * BATCH_SIZE, 16 * BATCH_SIZE):
+            X_1 = torch.zeros([0, 1, 32, 32])
+            target_1 = [] # torch.zeros([])
+            X_2 = torch.zeros([0, 1, 32, 32])
+            target_2 = [] # torch.zeros([])
+            for y_base in range(batch_base, batch_base + 16 * BATCH_SIZE, 16):
+                bias_1 = random.randint(0, 15)
+                bias_2 = random.randint(0, 15)
+                while(bias_2 == bias_1):
+                    bias_2 = random.randint(0, 15)
+                tmp_data1 = valid_data[y_base + bias_1][0]
+                tmp_data2 = valid_data[y_base + bias_2][0]
+                tmp_data1 = torch.reshape(tmp_data1, (1, 1, 32, 32))
+                tmp_data2 = torch.reshape(tmp_data2, (1, 1, 32, 32))
+                tmp_target1 = valid_data[y_base + bias_1][1]
+                tmp_target2 = valid_data[y_base + bias_2][1]
+                X_1 = torch.cat((X_1, tmp_data1), 0)
+                X_2 = torch.cat((X_2, tmp_data2), 0)
+                target_1.append(tmp_target1)
+                target_2.append(tmp_target2)
+                # target_1 = torch.cat((target_1, tmp_target1), 0)
+                # target_2 = torch.cat((target_2, tmp_target2), 0)
+            
+            data = torch.cat((X_1, X_2), 0).to(device)
+            target = torch.cat((torch.tensor(target_1), torch.tensor(target_2)), 0).to(device)
+            data, target = Variable(data), Variable(target)
+
+            output = model(data)
+            out_Y = [output[0 : BATCH_SIZE, :], output[BATCH_SIZE : 2 * BATCH_SIZE, :]]
+            valid_loss += E1(out_Y) + E2(out_Y)
+            valid_num = valid_num + 1
+
+            L2_dis = torch.norm(output[:, None] - output, dim=2, p=2)
+            L2_dis = L2_dis.cpu()
+            answer = target.cpu()
+            for i in range(BATCH_SIZE):
+                total_check = total_check + 1
+                nrst = np.argmin(L2_dis[i, BATCH_SIZE:BATCH_SIZE*2])
+                # print(i)
+                # print(nrst)
+                # print("=====")
+                if answer[BATCH_SIZE + nrst] == answer[i] :                        
+                    correct = correct + 1
+
+    print("valid_loss = ", valid_loss / valid_num)
+    print("correct = ", correct/ total_check)
+    valid_corrects.append(correct/total_check)
+    valid_losses.append(valid_loss / valid_num)
+
 test_corrects = []
 test_losses = []
-def test(epoch_num, model, device):
+def test(model, device):
     model.eval()
     test_loss = 0
     test_num = 0
@@ -202,7 +261,7 @@ def test(epoch_num, model, device):
                 # print(i)
                 # print(nrst)
                 # print("=====")
-                if nrst == i :                        
+                if answer[nrst+BATCH_SIZE] == answer[i] :                        
                     correct = correct + 1
 
     print("test_loss = ", test_loss / test_num)
@@ -210,17 +269,29 @@ def test(epoch_num, model, device):
     test_corrects.append(correct/total_check)
     test_losses.append(test_loss / test_num)
 
+
+valid(model, DEVICE)
+test(model, DEVICE)
+
 for epoch in range(1, EPOCHS + 1):
     train(model, DEVICE, optimizer, epoch)
-    test(epoch, model, DEVICE)
+    valid(model, DEVICE)
+    test(model, DEVICE)
 
-print("train end\n\nSaving testing data...")
-# np.save("E1+E2_test_loss", test_losses)
-# np.save("E1+E2_test_corr", test_corrects)
-np.save("E1_test_loss", test_losses)
-np.save("E1_test_corr", test_corrects)
-print("OK")
-print("Saving model...")
-# torch.save(model.state_dict(), "E1+E2_model.pth")
-torch.save(model.state_dict(), "E1_model.pth")
-print("OK")
+    if epoch%20 == 0:
+        print("train end\n\nSaving testing data...")
+        # np.save("E1+E2_test_loss", test_losses)
+        # np.save("E1+E2_test_corr", test_corrects)
+        np.save("E1_test_loss", test_losses)
+        np.save("E1_test_corr", test_corrects)
+        np.save("E1_valid_corr", valid_corrects)
+
+        print("OK")
+        print("Saving model...")
+        # torch.save(model.state_dict(), "E1+E2_model.pth")
+        torch.save(model.state_dict(), "E1_model.pth")
+        print("OK")
+        
+        opt = input("continue? y/n")
+        if opt == "n":
+            break

@@ -12,3 +12,4 @@ data
 datamaker/test
 datamaker/data
 datamaker/train
+datamaker/valid
